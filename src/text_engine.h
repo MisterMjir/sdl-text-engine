@@ -27,6 +27,12 @@ struct TextEngineFont
   SDL_Color color;
 };
 
+struct TextEngineChar
+{
+  SDL_Texture* texture;
+  SDL_Rect myPos;
+};
+
 class TextEngine
 {
 public:
@@ -49,10 +55,12 @@ private:
   std::string message;
   int currentChar;
   int currentSpeed;
-  int x, y, w, h;
+  int currentFont;
+  int messageX, messageY, currentX, currentY;
   std::vector<OutputSpeed> outputSpeeds;
   std::vector<TextEngineFont> fonts;
   std::vector<int> charTicks;
+  std::vector<TextEngineChar> chars;
 };
 
 #endif

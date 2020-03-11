@@ -33,8 +33,9 @@ int main(int argc, char *args[])
   // Initialize Text Engine
   TTF_Init();
 
-  txtEng = new TextEngine("Really long text to make text wrap.", 16, 16);
+  txtEng = new TextEngine("Really long text to make text wrap and other stuff.", 16, 16);
   txtEng->addFont(0, "res/Roboto_Mono/RobotoMono-Regular.ttf", 64);
+  txtEng->addFont(7, "res/Roboto_Mono/RobotoMono-Bold.ttf", 64);
   txtEng->addSpeed(7, 256);
   txtEng->addSpeed(11, 64);
 

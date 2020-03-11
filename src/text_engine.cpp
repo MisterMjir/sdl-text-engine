@@ -12,9 +12,9 @@ TextEngine::TextEngine(std::string mesg, int x, int y)
   message = wholeMessage[0];
   currentChar = 0;
   currentSpeed = defaults.speed;
-  this->x = x;
-  this->y = y;
-  w = h = 0;
+  currentFont = 0;
+  currentX = messageX = x;
+  currentY = messageY = y;
   outputSpeeds.push_back({0, 64});
   charTicks.push_back(0);
 }
@@ -23,6 +23,9 @@ TextEngine::~TextEngine()
 {
   for (auto font : fonts)
     TTF_CloseFont(font.font);
+
+  for (auto text : chars)
+    SDL_DestroyTexture(text.texture);
 }
 
 /*
@@ -33,19 +36,28 @@ void TextEngine::update()
   for (auto charTick : charTicks)
     charTick++;
 
-  // This segment can probably be optimized
-  for (auto os : outputSpeeds)
-  {
-    if (currentChar == os.index)
-    {
-      currentSpeed = os.speed;
-      break;
-    }
-  }
-
   ticks++;
   if (ticks % currentSpeed == 0)
     nextChar();
+
+    // This segment can probably be optimized
+    for (auto os : outputSpeeds)
+    {
+      if (currentChar == os.index)
+      {
+        currentSpeed = os.speed;
+        break;
+      }
+    }
+
+    for (int i = 0; i < fonts.size(); i ++)
+    {
+      if (currentChar == fonts[i].index)
+      {
+        currentFont = i;
+        break;
+      }
+    }
 }
 
 void TextEngine::draw(SDL_Renderer* ren)
@@ -57,17 +69,30 @@ void TextEngine::draw(SDL_Renderer* ren)
    */
   if (fonts.size() == 0)
     fonts.push_back({0, TTF_OpenFont(defaults.fontLoc, defaults.ptsize), defaults.color});
-  // Blended looks nicer than Solid, looks are priority
-  SDL_Surface* txtSurface = TTF_RenderText_Blended_Wrapped(fonts[0].font, message.c_str(), {0, 0, 0}, 1200 - x); // 1200 is window width
-  SDL_Texture* texture = SDL_CreateTextureFromSurface(ren, txtSurface);
 
-  w = txtSurface->w;
-  h = txtSurface->h;
-  SDL_Rect dRect = {x, y, txtSurface->w, txtSurface->h};
-  SDL_RenderCopy(ren, texture, NULL, &dRect);
+  if (chars.size() < message.length() && message.length() < wholeMessage.length())
+  {
+    // Blended looks nicer than Solid, looks are priority
+    SDL_Surface* txtSurface = TTF_RenderText_Blended_Wrapped(fonts[currentFont].font, message.substr(chars.size(), 1).c_str(), fonts[currentFont].color, 1200 - messageX); // 1200 is window width
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(ren, txtSurface);
 
-  SDL_FreeSurface(txtSurface);
-  SDL_DestroyTexture(texture);
+    chars.push_back({texture, {currentX, currentY, txtSurface->w, txtSurface->h}});
+
+    currentX += txtSurface->w;
+    if (currentX > 1200 - messageX)
+    {
+      currentX = messageX;
+      currentY += txtSurface->h;
+    }
+
+    SDL_FreeSurface(txtSurface);
+  }
+
+  for (auto text : chars)
+  {
+    SDL_RenderCopy(ren, text.texture, NULL, &text.myPos);
+  }
+
 }
 
 void TextEngine::nextChar()
@@ -82,15 +107,25 @@ void TextEngine::nextChar()
    */
   if (wholeMessage[currentChar] == ' ') // New word is approaching
   {
-    int charWidth = w / currentChar; // This is approximate, should be good enough
+    int totalWidth = 0;
+    for (auto text : chars)
+      totalWidth += text.myPos.w;
+    int charWidth = totalWidth / currentChar; // This is approximate, should be good enough
     int wordLen = wholeMessage.find(" ", currentChar + 1) - (currentChar + 1); // wordLen = index of new ' ' - index of first letter of word
     if (wordLen < 0) // Last word
       wordLen = wholeMessage.length() - (currentChar + 1);
 
-    if (wordLen * charWidth + (x + w) > 1200 - x) // if the new word will be greater than the width which will wrap
-      message += '\n';
+    std::cout << wordLen * charWidth + (messageX + currentX) << "\n";
+
+    if (wordLen * charWidth + (messageX + currentX) > 1200 - messageX) // if the new word will be greater than the width which will wrap
+    {
+      currentX = messageX;
+      currentY += chars[currentChar - 1].myPos.h;
+    }
     else
+    {
       message += ' ';
+    }
   }
   else
     message += wholeMessage[currentChar];
