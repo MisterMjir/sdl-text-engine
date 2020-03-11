@@ -12,6 +12,12 @@ struct OutputSpeed
   int speed;
 };
 
+struct MoveEvent
+{
+  int index;
+  bool moving;
+};
+
 struct TextEngineDefaults
 {
   int ptsize;
@@ -31,6 +37,7 @@ struct TextEngineChar
 {
   SDL_Texture* texture;
   SDL_Rect myPos;
+  bool moving;
 };
 
 class TextEngine
@@ -45,6 +52,7 @@ public:
   void addFont(int index, const char* fontLoc, int ptsize);
   void addFont(int index, const char* fontLoc, int ptsize, SDL_Color color);
   void addSpeed(int index, int speed);
+  void setMoving(int index, bool);
 private:
   void nextChar();
   void fullMessage();
@@ -56,9 +64,11 @@ private:
   int currentChar;
   int currentSpeed;
   int currentFont;
+  bool moving;
   int messageX, messageY, currentX, currentY;
   std::vector<OutputSpeed> outputSpeeds;
   std::vector<TextEngineFont> fonts;
+  std::vector<MoveEvent> moveEvents;
   std::vector<int> charTicks;
   std::vector<TextEngineChar> chars;
 };

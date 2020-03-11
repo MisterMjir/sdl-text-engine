@@ -1,4 +1,5 @@
 #include "text_engine.h"
+#include <cmath>
 
 #include <iostream>
 
@@ -17,6 +18,7 @@ TextEngine::TextEngine(std::string mesg, int x, int y)
   currentY = messageY = y;
   outputSpeeds.push_back({0, 64});
   charTicks.push_back(0);
+  moving = false;
 }
 
 TextEngine::~TextEngine()
@@ -33,8 +35,8 @@ TextEngine::~TextEngine()
  */
 void TextEngine::update()
 {
-  for (auto charTick : charTicks)
-    charTick++;
+  for (int i = 0; i < charTicks.size(); i++)
+    charTicks[i]++;
 
   ticks++;
   if (ticks % currentSpeed == 0)
@@ -58,6 +60,15 @@ void TextEngine::update()
         break;
       }
     }
+
+    for (int i = 0; i < moveEvents.size(); i++)
+    {
+      if (currentChar == moveEvents[i].index)
+      {
+        moving = moveEvents[i].moving;
+        break;
+      }
+    }
 }
 
 void TextEngine::draw(SDL_Renderer* ren)
@@ -76,7 +87,7 @@ void TextEngine::draw(SDL_Renderer* ren)
     SDL_Surface* txtSurface = TTF_RenderText_Blended_Wrapped(fonts[currentFont].font, message.substr(chars.size(), 1).c_str(), fonts[currentFont].color, 1200 - messageX); // 1200 is window width
     SDL_Texture* texture = SDL_CreateTextureFromSurface(ren, txtSurface);
 
-    chars.push_back({texture, {currentX, currentY, txtSurface->w, txtSurface->h}});
+    chars.push_back({texture, {currentX, currentY, txtSurface->w, txtSurface->h}, moving});
 
     currentX += txtSurface->w;
     if (currentX > 1200 - messageX)
@@ -88,9 +99,15 @@ void TextEngine::draw(SDL_Renderer* ren)
     SDL_FreeSurface(txtSurface);
   }
 
-  for (auto text : chars)
+  for (int i = 0; i < chars.size(); i++)
   {
-    SDL_RenderCopy(ren, text.texture, NULL, &text.myPos);
+    SDL_Rect dRect;
+    if (chars[i].moving)
+      dRect = {chars[i].myPos.x, chars[i].myPos.y + (int) (10 * std::sin(charTicks[i] * 5)), chars[i].myPos.w, chars[i].myPos.h};
+    else
+      dRect = chars[i].myPos;
+    std::cout << charTicks[i] << "\n";
+    SDL_RenderCopy(ren, chars[i].texture, NULL, &dRect);
   }
 
 }
@@ -114,8 +131,6 @@ void TextEngine::nextChar()
     int wordLen = wholeMessage.find(" ", currentChar + 1) - (currentChar + 1); // wordLen = index of new ' ' - index of first letter of word
     if (wordLen < 0) // Last word
       wordLen = wholeMessage.length() - (currentChar + 1);
-
-    std::cout << wordLen * charWidth + (messageX + currentX) << "\n";
 
     if (wordLen * charWidth + (messageX + currentX) > 1200 - messageX) // if the new word will be greater than the width which will wrap
     {
@@ -158,4 +173,9 @@ void TextEngine::addFont(int index, const char* fontLoc, int ptsize)
 void TextEngine::addFont(int index, const char* fontLoc, int ptsize, SDL_Color color)
 {
   fonts.push_back({index, TTF_OpenFont(fontLoc, ptsize), color});
+}
+
+void TextEngine::setMoving(int index, bool moving)
+{
+  moveEvents.push_back({index, moving});
 }

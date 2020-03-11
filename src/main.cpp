@@ -38,6 +38,7 @@ int main(int argc, char *args[])
   txtEng->addFont(7, "res/Roboto_Mono/RobotoMono-Bold.ttf", 64);
   txtEng->addSpeed(7, 256);
   txtEng->addSpeed(11, 64);
+  txtEng->setMoving(7, true);
 
 
   while (running)
