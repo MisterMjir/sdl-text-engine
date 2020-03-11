@@ -33,7 +33,11 @@ int main(int argc, char *args[])
   // Initialize Text Engine
   TTF_Init();
 
-  txtEng = new TextEngine("What's popping?", 64);
+  txtEng = new TextEngine("Really long text to make text wrap.", 16, 16);
+  txtEng->addFont(0, "res/Roboto_Mono/RobotoMono-Regular.ttf", 64);
+  txtEng->addSpeed(7, 256);
+  txtEng->addSpeed(11, 64);
+
 
   while (running)
   {
@@ -70,10 +74,6 @@ void draw(SDL_Renderer *renderer)
 {
   SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
   SDL_RenderClear(renderer);
-
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-  SDL_Rect rect = {32, 32, 64, 1};
-  SDL_RenderDrawRect(renderer, &rect);
 
   txtEng->draw(renderer);
 

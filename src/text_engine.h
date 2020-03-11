@@ -2,26 +2,57 @@
 #define TEXT_ENGINE
 
 #include <string>
+#include <vector>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL.h>
+
+struct OutputSpeed
+{
+  int index;
+  int speed;
+};
+
+struct TextEngineDefaults
+{
+  int ptsize;
+  const char* fontLoc;
+  int speed;
+  SDL_Color color;
+};
+
+struct TextEngineFont
+{
+  int index;
+  TTF_Font* font;
+  SDL_Color color;
+};
 
 class TextEngine
 {
 public:
-  TextEngine(std::string mesg, int ptsize);
+  TextEngine(std::string mesg, int x, int y);
   ~TextEngine();
 
   void update();
   void draw(SDL_Renderer*);
+  bool finished();
+  void addFont(int index, const char* fontLoc, int ptsize);
+  void addFont(int index, const char* fontLoc, int ptsize, SDL_Color color);
+  void addSpeed(int index, int speed);
 private:
-  void nextCharacter();
+  void nextChar();
   void fullMessage();
+
+  static TextEngineDefaults defaults;
 
   std::string wholeMessage;
   std::string message;
-  TTF_Font* font;
   int currentChar;
-  SDL_Texture* texture;
+  int currentSpeed;
+  int x, y, w, h;
+  std::vector<OutputSpeed> outputSpeeds;
+  std::vector<TextEngineFont> fonts;
+  std::vector<int> charTicks;
 };
 
 #endif
