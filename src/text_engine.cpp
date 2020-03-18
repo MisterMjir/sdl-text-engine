@@ -1,11 +1,11 @@
 #include "text_engine.h"
 #include <cmath>
 
-#include <iostream>
-
 TextEngineDefaults TextEngine::defaults = {16, "res/Roboto_Mono/RobotoMono-Regular.ttf", 64, {0, 0, 0}};
 
-static int ticks = 0; // For demonstration
+// These variables aren't 100% needed
+static int WINDOW_WIDTH = 1200;
+static int WRAP_WIDTH = WINDOW_WIDTH - 32;
 
 TextEngine::TextEngine(std::string mesg, int x, int y)
 {
@@ -41,75 +41,21 @@ void TextEngine::update()
   ticks++;
   if (ticks % currentSpeed == 0)
     nextChar();
-
-    // This segment can probably be optimized
-    for (auto os : outputSpeeds)
-    {
-      if (currentChar == os.index)
-      {
-        currentSpeed = os.speed;
-        break;
-      }
-    }
-
-    for (int i = 0; i < fonts.size(); i ++)
-    {
-      if (currentChar == fonts[i].index)
-      {
-        currentFont = i;
-        break;
-      }
-    }
-
-    for (int i = 0; i < moveEvents.size(); i++)
-    {
-      if (currentChar == moveEvents[i].index)
-      {
-        moving = moveEvents[i].moving;
-        break;
-      }
-    }
+  //fullMessage();
 }
 
 void TextEngine::draw(SDL_Renderer* ren)
 {
-  /*
-   * Multi-fonts not supported yet
-   * Just using the first font available
-   * I will need to redo the smart wrap code and a lot of other code
-   */
-  if (fonts.size() == 0)
-    fonts.push_back({0, TTF_OpenFont(defaults.fontLoc, defaults.ptsize), defaults.color});
-
-  if (chars.size() < message.length() && message.length() < wholeMessage.length())
-  {
-    // Blended looks nicer than Solid, looks are priority
-    SDL_Surface* txtSurface = TTF_RenderText_Blended_Wrapped(fonts[currentFont].font, message.substr(chars.size(), 1).c_str(), fonts[currentFont].color, 1200 - messageX); // 1200 is window width
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(ren, txtSurface);
-
-    chars.push_back({texture, {currentX, currentY, txtSurface->w, txtSurface->h}, moving});
-
-    currentX += txtSurface->w;
-    if (currentX > 1200 - messageX)
-    {
-      currentX = messageX;
-      currentY += txtSurface->h;
-    }
-
-    SDL_FreeSurface(txtSurface);
-  }
-
+  makeTexture(ren, currentChar);
   for (int i = 0; i < chars.size(); i++)
   {
     SDL_Rect dRect;
-    if (chars[i].moving)
-      dRect = {chars[i].myPos.x, chars[i].myPos.y + (int) (10 * std::sin(charTicks[i] * 5)), chars[i].myPos.w, chars[i].myPos.h};
+    if (chars[i].moving) // Edit sine function as needed (Remember Algebra II: vertical stretch/compression * sin(x * horizontal strech/compression))
+      dRect = {chars[i].myPos.x, chars[i].myPos.y + (int) (5 * std::sin(charTicks[i] / 50)), chars[i].myPos.w, chars[i].myPos.h};
     else
       dRect = chars[i].myPos;
-    std::cout << charTicks[i] << "\n";
     SDL_RenderCopy(ren, chars[i].texture, NULL, &dRect);
   }
-
 }
 
 void TextEngine::nextChar()
@@ -132,10 +78,9 @@ void TextEngine::nextChar()
     if (wordLen < 0) // Last word
       wordLen = wholeMessage.length() - (currentChar + 1);
 
-    if (wordLen * charWidth + (messageX + currentX) > 1200 - messageX) // if the new word will be greater than the width which will wrap
+    if (wordLen * charWidth + (messageX + currentX) > WRAP_WIDTH) // if the new word will be greater than the width which will wrap
     {
-      currentX = messageX;
-      currentY += chars[currentChar - 1].myPos.h;
+      message += '\n';
     }
     else
     {
@@ -145,15 +90,19 @@ void TextEngine::nextChar()
   else
     message += wholeMessage[currentChar];
 
+  changeProperties();
+
   charTicks.push_back(0);
 }
 
-void TextEngine::fullMessage()
+/*void TextEngine::fullMessage()
 {
-  message = wholeMessage;
-  while (charTicks.size() != wholeMessage.length())
-    charTicks.push_back(0);
-}
+  currentSpeed = 1;
+  while (message.length() != wholeMessage.length())
+  {
+    nextChar();
+  }
+}*/
 
 bool TextEngine::finished()
 {
@@ -178,4 +127,59 @@ void TextEngine::addFont(int index, const char* fontLoc, int ptsize, SDL_Color c
 void TextEngine::setMoving(int index, bool moving)
 {
   moveEvents.push_back({index, moving});
+}
+
+void TextEngine::changeProperties()
+{
+  for (auto os : outputSpeeds)
+  {
+    if (currentChar == os.index)
+    {
+      currentSpeed = os.speed;
+      break;
+    }
+  }
+
+  for (int i = 0; i < fonts.size(); i ++)
+  {
+    if (currentChar == fonts[i].index)
+    {
+      currentFont = i;
+      break;
+    }
+  }
+
+  for (int i = 0; i < moveEvents.size(); i++)
+  {
+    if (currentChar == moveEvents[i].index)
+    {
+      moving = moveEvents[i].moving;
+      break;
+    }
+  }
+}
+
+void TextEngine::makeTexture(SDL_Renderer* ren, int i)
+{
+  // Can't have more characters than the message; don't want to print that \0
+  if (chars.size() < message.length() && chars.size() < wholeMessage.size())
+  {
+    if (fonts.size() == 0)
+      fonts.push_back({0, TTF_OpenFont(defaults.fontLoc, defaults.ptsize), defaults.color});
+
+    // Blended looks nicer than Solid, looks are priority
+    SDL_Surface* txtSurface = TTF_RenderText_Blended_Wrapped(fonts[currentFont].font, &message[i], fonts[currentFont].color, WRAP_WIDTH);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(ren, txtSurface);
+
+    chars.push_back({texture, {currentX, currentY, txtSurface->w, txtSurface->h}, moving});
+
+    currentX += txtSurface->w;
+    if (currentX > WRAP_WIDTH || message[i] == '\n')
+    {
+      currentX = messageX;
+      currentY += txtSurface->h;
+    }
+
+    SDL_FreeSurface(txtSurface);
+  }
 }

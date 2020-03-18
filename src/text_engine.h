@@ -53,12 +53,18 @@ public:
   void addFont(int index, const char* fontLoc, int ptsize, SDL_Color color);
   void addSpeed(int index, int speed);
   void setMoving(int index, bool);
-private:
+
   void nextChar();
-  void fullMessage();
+  //void fullMessage();
+
+  static TextEngineDefaults getDefaults() {return defaults;}
+private:
+  void changeProperties();
+  void makeTexture(SDL_Renderer*, int i);
 
   static TextEngineDefaults defaults;
 
+  int ticks;
   std::string wholeMessage;
   std::string message;
   int currentChar;
